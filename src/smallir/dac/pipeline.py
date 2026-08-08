@@ -35,8 +35,9 @@ class Pipeline:
     transformer: Transformer
     deployer: Deployer
 
-    def stream(self, paths: Iterable[Path]) -> Iterator[Path]:
+    def stream(self, paths: Iterable[Path]):
         raw_content = self.loader.load(paths)
         parsed_rules = self.parser.parse(raw_content)
         transformed_rules = self.transformer.transform(parsed_rules)
-        return self.deployer.deploy(transformed_rules)
+        self.deployer.deploy(transformed_rules)
+
