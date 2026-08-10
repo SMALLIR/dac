@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, ImportString
 from pydantic_settings import BaseSettings, SettingsConfigDict, CliPositionalArg
 
-def _read_stdin() -> list[str]:
-    ....
+
+def _read_stdin() -> list[str]: ...
 
 
 class StartupConfig(BaseSettings):
@@ -20,17 +20,19 @@ class StartupConfig(BaseSettings):
         cli_enforce_required=True,
     )
 
-    # Positional CLI arguments (e.g. smallir-dac test.py rules/)
-    files: CliPositionalArg[list[str]] = Field(
-        default_factory=_read_stdin,
-        description="Target YAML files, directories, or glob patterns.",
+    loader: ImportString = Field(
+        default=None,
+        description="The loader to load the detection rules"
     )
 
-    # Output directory flag: supports -o, --output-dir, or --output
-    output_dir: Optional[Path] = Field(
+    transformer: ImportString  = Field(
         default=None,
-        validation_alias=AliasChoices("o", "output_dir", "output"),
-        description="Target output directory for generated rules.",
+        description="The transformer to load the detection rules"
+    )
+
+    deployer: ImportString  = Field(
+        default=None,
+        description="The deployer to deploy the detection rules"
     )
 
     # Explicit dry run flag: supports -d or --dry-run
