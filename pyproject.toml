@@ -9,18 +9,17 @@ description = "A soc tool for managing detection rules as code (DAC)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "black>=26.5.1",
+    "isort>=8.0.1",
+    "mypy>=2.3.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
+    "pylint>=4.0.7",
+    "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
-    "toml>=0.10.2"
+    "toml>=0.10.2",
+    "types-pyyaml>=6.0.12.20260724",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/smallir"]
-
-[dependency-groups]
-dev = [
-    "black>=26.5.1",
-    "isort>=8.0.1",
-    "types-pyyaml>=6.0.12.20260724",
-]

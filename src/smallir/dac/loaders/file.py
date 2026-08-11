@@ -1,17 +1,30 @@
-class FileLoader:
+from typing import Any, Iterator
 
-    # Positional CLI arguments (e.g. smallir-dac test.py rules/)
+from pydantic import BaseModel, Field
+from pydantic_settings import (BaseSettings, CliPositionalArg,
+                               SettingsConfigDict)
+
+
+def _read_stdin() -> list[str]:
+    return ["-"]
+
+
+class FileLoaderConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="SMALLIR_LOADER_",
+        frozen=True,
+        extra="forbid",
+    )
+
+    # Positional CLI arguments
     files: CliPositionalArg[list[str]] = Field(
         default_factory=_read_stdin,
         description="Target YAML files, directories, or glob patterns.",
     )
 
-    # Output directory flag: supports -o or --output
-    output: Optional[Path] = Field(
-        default=None,
-        validation_alias=AliasChoices("o", "output"),
-        description="Target output directory for generated rules.",
-    )
 
-    def load(file: str): 
-        ...
+class FileLoader(BaseModel):
+    config: FileLoaderConfig = Field(default_factory=FileLoaderConfig)
+
+    def load(self) -> Iterator[dict[str, Any]]:
+        print(self.config.files)
