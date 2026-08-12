@@ -1,5 +1,4 @@
-from collections.abc import Iterable, Iterator
-from pathlib import Path
+from collections.abc import Iterator
 from typing import Any, Protocol, runtime_checkable
 
 

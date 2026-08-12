@@ -6,5 +6,4 @@ from smallir.dac.deployers.protocol import Deployer
 
 
 class TestDeployer(Deployer):
-
     def deploy(self, transformed_rules: Iterable[dict[str, Any]]) -> Iterator[Path]: ...

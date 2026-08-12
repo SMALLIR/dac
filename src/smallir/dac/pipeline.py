@@ -1,6 +1,4 @@
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from pathlib import Path
 
 from smallir.dac.deployers.protocol import Deployer
 from smallir.dac.loaders.protocol import Loader
