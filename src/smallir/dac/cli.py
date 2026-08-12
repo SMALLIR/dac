@@ -14,9 +14,10 @@ from smallir.dac.parsers.protocol import Parser
 from smallir.dac.pipeline import Pipeline
 from smallir.dac.transformers.protocol import Transformer
 
-# Initialize root logger at the top of the file
-logger = logging.getLogger()
+# Initialize logger
+logger = logging.getLogger(__name__)
 
+# Set available log levels in a Literal
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
@@ -63,7 +64,7 @@ class PipelineConfig(BaseSettings):
     def _validate_loader(cls, loader: type[Loader]) -> type[Loader]:
         if not issubclass(loader, Loader):
             raise TypeError(
-                f"Class '{loader.__qualname__}' does not implement the '{Loader.__name__}' protocol."
+                f"Class '{loader.__qualname__}' does not implement the '{Loader.__name__}' protocol"
             )
         return loader
 
@@ -72,7 +73,7 @@ class PipelineConfig(BaseSettings):
     def _validate_parser(cls, parser: type[Parser]) -> type[Parser]:
         if not issubclass(parser, Parser):
             raise TypeError(
-                f"Class '{parser.__qualname__}' does not implement the '{Parser.__name__}' protocol."
+                f"Class '{parser.__qualname__}' does not implement the '{Parser.__name__}' protocol"
             )
         return parser
 
@@ -81,7 +82,7 @@ class PipelineConfig(BaseSettings):
     def _validate_transformer(cls, transformer: type[Transformer]) -> type[Transformer]:
         if not issubclass(transformer, Transformer):
             raise TypeError(
-                f"Class '{transformer.__qualname__}' does not implement the '{Transformer.__name__}' protocol."
+                f"Class '{transformer.__qualname__}' does not implement the '{Transformer.__name__}' protocol"
             )
         return transformer
 
@@ -90,7 +91,7 @@ class PipelineConfig(BaseSettings):
     def _validate_deployer(cls, deployer: type[Deployer]) -> type[Deployer]:
         if not issubclass(deployer, Deployer):
             raise TypeError(
-                f"Class '{deployer.__qualname__}' does not implement the '{Deployer.__name__}' protocol."
+                f"Class '{deployer.__qualname__}' does not implement the '{Deployer.__name__}' protocol"
             )
         return deployer
 
@@ -135,11 +136,11 @@ def entrypoint() -> None:
     # Configure root logging with the level specified in DAC_PIPELINE_LOG_LEVEL
     logging.basicConfig(
         level=pipeline_config.log_level,
-        format="%(asctime)s | %(levelname)-8s | %(name)s - %(message)s",
-        force=True,
+        format='timestamp="%(asctime)s" level="%(levelname)s" logger="%(name)s" msg="%(message)s"',
+        datefmt="%Y-%m-%dT%H:%M:%S%z",  # ISO 8601 timestamp with timezone offset
+        force=True,  # Overrides any early-initialized default handlers
     )
-    logger.debug("Logging configured at level: %s", pipeline_config.log_level)
-    logger.info("Info message")
+    logger.debug("Logger initialized with level: %s", pipeline_config.log_level)
 
     # Initialize pipeline components to prepare them for dependency injection.
     loader: Loader = pipeline_config.loader()

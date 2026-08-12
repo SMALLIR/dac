@@ -1,26 +1,28 @@
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
-from pydantic_settings import (BaseSettings, CliPositionalArg,
-                               SettingsConfigDict)
-
-
-def _read_stdin() -> list[str]:
-    return ["-"]
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class FileLoaderConfig(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="SMALLIR_LOADER_",
+        env_prefix="DAC_LOADER_",
         frozen=True,
         extra="forbid",
     )
 
-    # Positional CLI arguments
-    files: CliPositionalArg[list[str]] = Field(
-        default_factory=_read_stdin,
-        description="Target YAML files, directories, or glob patterns.",
+    paths: list[Path] = Field(
+        description="Target files, directories, or glob patterns"
+    )
+
+    recursive: bool = Field(
+        description="Whether to recursively load files from directories"
+    )
+
+    patch: bool = Field(
+        description="Whether to patch the files"
     )
 
 
@@ -28,4 +30,4 @@ class FileLoader(BaseModel):
     config: FileLoaderConfig = Field(default_factory=FileLoaderConfig)
 
     def load(self) -> Iterator[dict[str, Any]]:
-        print(self.config.files)
+        print(self.config.paths)
