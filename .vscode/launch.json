@@ -1,0 +1,17 @@
+{
+    // Gebruik IntelliSense om mogelijke attributen te vinden.
+    // Wijs naar bestaande attributen om de bijbehorende beschrijvingen te zien.
+    // Voor meer informatie, zie https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${cwd}/src/smallir/dac/cli.py",
+            "console": "integratedTerminal",
+            "args": "--env test.env"
+        }
+    ]
+}
