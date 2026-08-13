@@ -1,10 +1,10 @@
-import logging
-import yaml
 import json
-import tomllib
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Literal
+import tomllib
+import yaml
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -51,19 +51,21 @@ class FileLoader(BaseModel):
         """Yields candidate paths from direct files or targeted directory scans."""
         for path in self.config.paths:
             if path.is_file():
-                logger.debug(f"Found file path: {path}")
+                logger.debug("Found file path: %s", path)
                 yield path
             elif path.is_dir():
                 logger.debug(
-                    f"Processing directory (recursive={self.config.recursive}): {path}"
+                    "Processing directory (recursive=%s): %s",
+                    self.config.recursive,
+                    path,
                 )
                 glob_fn = path.rglob if self.config.recursive else path.glob
 
                 # Glob specifically for each allowed extension
                 for ext in self.config.allowed_extensions:
-                    for item in glob_fn(f"*{ext}"):
-                        if item.is_file():
-                            yield item
+                    for file_path in glob_fn(f"*{ext}"):
+                        if file_path.is_file():
+                            yield file_path
             else:
                 logger.error("Skipping invalid path: %s", path)
 
@@ -75,35 +77,45 @@ class FileLoader(BaseModel):
             if path.suffix.lower() in self.config.allowed_extensions
         )
 
-    def _resolve_absolute_paths(self, paths: Iterator[Path]) -> Iterator[Path]:
-        """Resolves the absolute path of the files"""
-        yield from (path.resolve() for path in paths)
-
     def _deduplicate_paths(self, paths: Iterator[Path]) -> Iterator[Path]:
-        """Yields unique paths, discarding any duplicate absolute paths."""
+        """Yields unique paths, using resolved paths only for duplicate tracking."""
         seen: set[Path] = set()
         for path in paths:
-            if path not in seen:
-                seen.add(path)
+            resolved = path.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
                 yield path
+
+    def _read_paths(self, paths: Iterator[Path]) -> Iterator[dict[str, Any]]:
+        """Yields the filecontent and parses it using a supported parser."""
+        for path in paths:
+            # Get the raw content of the file
+            raw_content = path.read_text(encoding="utf-8")
+
+            # Get the right parser for this type of file
+            parser = SUPPORTED_PARSERS[path.suffix.lower()]
+
+            # Parse the raw_content
+            parsed_content = parser(raw_content)
+
+            yield parsed_content
 
     def load(self) -> Iterator[dict[str, Any]]:
         # Searches files that can be proccessed
-        resolved_paths: Iterator[Path] = self._search_files()
+        found_paths: Iterator[Path] = self._search_files()
 
         # Filters the paths based on the configured allowed extensions
         filtered_paths: Iterator[Path] = self._filter_file_extensions(
-            paths=resolved_paths
-        )
-
-        # Resolve the paths to absolute paths to prevent multiple references to the same paths
-        resolved_paths: Iterator[Path] = self._resolve_absolute_paths(
-            paths=filtered_paths
+            paths=found_paths
         )
 
         # Deduplicate the paths so all files only get processed once
-        deduplicate_paths: Iterator[Path] = self._deduplicate_paths(paths=resolved_paths)
+        deduplicated_paths: Iterator[Path] = self._deduplicate_paths(
+            paths=filtered_paths
+        )
 
-        # Itterate over the paths and load them using the correct parser
-        for path in deduplicate_paths:
-            print(path)
+        parsed_contents: Iterator[dict[str, Any]] = self._read_paths(
+            paths=deduplicated_paths
+        )
+
+        yield from parsed_contents
