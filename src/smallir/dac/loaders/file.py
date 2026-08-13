@@ -29,5 +29,17 @@ class FileLoaderConfig(BaseSettings):
 class FileLoader(BaseModel):
     config: FileLoaderConfig = Field(default_factory=FileLoaderConfig)
 
+    def _search_paths(self):
+        # Itterate over the target paths
+        for path in self.config.paths:
+            if path.is_file():
+                print(f"Yield path: {path}")
+                yield path
+            elif path.is_dir():
+                print(f"Processing directory: {path}")
+            else:
+                print(f"Skipping invalid path: {path}")
+
     def load(self) -> Iterator[dict[str, Any]]:
-        print(self.config.paths)
+        self._search_paths()
+
