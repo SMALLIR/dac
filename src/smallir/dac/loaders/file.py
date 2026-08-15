@@ -2,6 +2,7 @@ import json
 import logging
 import tomllib
 from collections.abc import Callable, Iterable, Iterator
+from functools import reduce
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -38,6 +39,14 @@ class FileLoaderConfig(BaseSettings):
 
     recursive: bool = Field(
         description="Whether to recursively load files from directories"
+    )
+
+    data_path: Optional[str] = Field(
+        description="The data path starting from the root", default=None
+    )
+
+    unpacked_data_path: Optional[str] = Field(
+        description="The data path after unpacking a list", default=None
     )
 
     patch: bool = Field(description="Whether to patch the files")
@@ -131,7 +140,7 @@ class FileLoader(BaseModel):
             except Exception as error:
                 logger.error("Unhandled error resolving path '%s': %s", path, error)
 
-    def _read_data(self, paths: Iterable[Path]) -> Iterator[dict[str, Any]]:
+    def _read_data(self, paths: Iterable[Path]) -> Iterator[dict[str, Any] | list[dict[str, Any]]]:
         """Yields the filecontent and parses it using a supported parser."""
         for path in paths:
             ext = path.suffix.lower()
@@ -175,49 +184,53 @@ class FileLoader(BaseModel):
                 continue
 
             # Guard dictionary contract
-            if isinstance(parsed_content, dict):
+            if isinstance(parsed_content, (dict, list)):
                 yield parsed_content
             else:
                 logger.error(
-                    "Skipping '%s': expected dict, got %s",
+                    "Skipping '%s': expected dict or list, got %s",
                     path,
                     type(parsed_content).__name__,
                 )
 
     def _select_data(
         self, data: Iterable[dict[str, Any]], dot_path: Optional[str]
-    ) -> Iterator[dict[str, Any]]:
+    ) -> Iterator[dict[str, Any] | list[dict[str, Any]]]:
         """Yields part of a dictionary based on the dot path into the dictionary structure"""
         # This method is always called by the pipeline and because of that we can skip it if we dont need to select a subpath
         if not dot_path:
             yield from data
-            return # Stop the execution of the method
+            return  # Stop the execution of the method
 
+        # Iterate over the all the items in te generator and extract the dict inside there
+        dot_keys: list[str] = dot_path.split(".")
         for item in data:
-            ...            
-        
+            try:
+                result = reduce(dict.__getitem__, dot_keys, item)
+                if result is not None:
+                    yield result
+            except (KeyError, TypeError):
+                logger.error("Failed accessing path '%s' on payload", dot_path)
 
-
-
-def _unpack_data(self, data: Iterable[Any]) -> Iterator[dict[str, Any]]:
-    """Yields dictionaries individually, unpacking nested lists if encountered."""
-    for item in data:
-        if isinstance(item, list):
-            for entry in item:
-                if isinstance(entry, dict):
-                    yield entry
-                else:
-                    logger.error(
-                        "Skipping invalid item in list: expected dict, got %s",
-                        type(entry).__name__,
-                    )
-        elif isinstance(item, dict):
-            yield item
-        else:
-            logger.error(
-                "Skipping invalid payload: expected dict or list, got %s",
-                type(item).__name__,
-            )
+    def _unpack_data(self, data: Iterable[Any]) -> Iterator[dict[str, Any]]:
+        """Yields dictionaries individually, unpacking nested lists if encountered."""
+        for item in data:
+            if isinstance(item, list):
+                for entry in item:
+                    if isinstance(entry, dict):
+                        yield entry
+                    else:
+                        logger.error(
+                            "Skipping invalid item in list: expected dict, got %s",
+                            type(entry).__name__,
+                        )
+            elif isinstance(item, dict):
+                yield item
+            else:
+                logger.error(
+                    "Skipping invalid payload: expected dict or list, got %s",
+                    type(item).__name__,
+                )
 
     def load(self) -> Iterator[dict[str, Any]]:
         # Searches files that can be processed
@@ -231,12 +244,18 @@ def _unpack_data(self, data: Iterable[Any]) -> Iterator[dict[str, Any]]:
             paths=filtered_paths
         )
 
-        parsed_contents: Iterator[dict[str, Any]] = self._read_data(
+        parsed_contents: Iterator[dict[str, Any] | list[dict[str, Any]]] = self._read_data(
             paths=deduplicated_paths
         )
 
-        selected_data: Iterator[dict[str, Any]] = self._select_data(
-            data=parsed_contents
+        selected_data: Iterator[dict[str, Any] | list[dict[str, Any]]] = self._select_data(
+            data=parsed_contents, dot_path=self.config.data_path
         )
 
-        yield from parsed_contents
+        unpacked_data: Iterator[dict[str, Any]] = self._unpack_data(data=selected_data)
+
+        extracted_data: Iterator[dict[str, Any]] = self._select_data(
+            data=unpacked_data, dot_path=self.config.unpacked_data_path
+        )
+
+        yield from extracted_data
