@@ -31,25 +31,28 @@ class FileLoaderConfig(BaseSettings):
         extra="forbid",
     )
 
-    paths: list[Path] = Field(description="Target files, directories, or glob patterns")
+    paths: list[Path] = Field(
+        description="Target files, directories, or glob patterns", default_factory=list
+    )
 
     allowed_extensions: set[SupportedFileExtensions] = Field(
-        description="Allowed for this loader, supported extensions are: .yaml, .yml, .json, .toml"
+        description="Allowed for this loader, supported extensions are: .yaml, .yml, .json, .toml",
+        default_factory=set[SupportedFileExtensions],
     )
 
     recursive: bool = Field(
-        description="Whether to recursively load files from directories"
+        description="Whether to recursively load files from directories", default=True
     )
 
-    data_path: Optional[str] = Field(
+    data_path: str | None = Field(
         description="The data path starting from the root", default=None
     )
 
-    unpacked_data_path: Optional[str] = Field(
+    unpacked_data_path: str | None = Field(
         description="The data path after unpacking a list", default=None
     )
 
-    patch: bool = Field(description="Whether to patch the files")
+    patch: bool = Field(description="Whether to patch the files", default=False)
 
 
 class FileLoader(BaseModel):
@@ -140,7 +143,9 @@ class FileLoader(BaseModel):
             except Exception as error:
                 logger.error("Unhandled error resolving path '%s': %s", path, error)
 
-    def _read_data(self, paths: Iterable[Path]) -> Iterator[dict[str, Any] | list[dict[str, Any]]]:
+    def _read_data(
+        self, paths: Iterable[Path]
+    ) -> Iterator[dict[str, Any] | list[dict[str, Any]]]:
         """Yields the filecontent and parses it using a supported parser."""
         for path in paths:
             ext = path.suffix.lower()
@@ -194,7 +199,7 @@ class FileLoader(BaseModel):
                 )
 
     def _select_data(
-        self, data: Iterable[dict[str, Any]], dot_path: Optional[str]
+        self, data: Iterable[dict[str, Any]], dot_path: str | None
     ) -> Iterator[dict[str, Any] | list[dict[str, Any]]]:
         """Yields part of a dictionary based on the dot path into the dictionary structure"""
         # This method is always called by the pipeline and because of that we can skip it if we dont need to select a subpath
@@ -202,7 +207,7 @@ class FileLoader(BaseModel):
             yield from data
             return  # Stop the execution of the method
 
-        # Iterate over the all the items in te generator and extract the dict inside there
+        # Iterate over the all the items in the generator and extract the dict inside there
         dot_keys: list[str] = dot_path.split(".")
         for item in data:
             try:
@@ -244,12 +249,12 @@ class FileLoader(BaseModel):
             paths=filtered_paths
         )
 
-        parsed_contents: Iterator[dict[str, Any] | list[dict[str, Any]]] = self._read_data(
-            paths=deduplicated_paths
+        parsed_contents: Iterator[dict[str, Any] | list[dict[str, Any]]] = (
+            self._read_data(paths=deduplicated_paths)
         )
 
-        selected_data: Iterator[dict[str, Any] | list[dict[str, Any]]] = self._select_data(
-            data=parsed_contents, dot_path=self.config.data_path
+        selected_data: Iterator[dict[str, Any] | list[dict[str, Any]]] = (
+            self._select_data(data=parsed_contents, dot_path=self.config.data_path)
         )
 
         unpacked_data: Iterator[dict[str, Any]] = self._unpack_data(data=selected_data)

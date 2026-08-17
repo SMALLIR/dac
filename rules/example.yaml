@@ -1,0 +1,22 @@
+---
+metadata:
+  guid: a2bff759-a5eb-4547-b82b-94618c808b28
+  id: 12345
+  name: Example Rule
+  Severity: High
+  Confidence: Low
+  mitre_techniques: |
+    - t123.56
+  labels: |
+    - aaaa
+searches:
+  - platform: defender
+    enabled: true
+    query: select abc
+    suppressions: aaa
+    actions: abc
+  - platform: elastic
+    enabled: true
+    query: select abc
+    suppressions: aaa
+    actions: abc
