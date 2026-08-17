@@ -72,16 +72,18 @@ class Action(Model):
 class Suppression(Model):
     """Suppression settings for the rule."""
 
-    enabled: bool = Field(default=False, description="Whether the suppression is enabled.")
-    time: str = Field(description="The time for the suppression.")
+    enabled: bool = Field(
+        default=False, description="Whether the suppression is enabled."
+    )
+    duration: str = Field(description="The duration of the suppression.")
+
 
 class Source(Model):
     """The source of the rule."""
-    path: str = Field(description="The path to the rule.")
 
-class aaaa(Model):
-    ticket: str = Field(description="The ticket for the rule.")
-
+    path: str | None = Field(default=None, description="The path to the source of this rule.")
+    author: str | None = Field(default=None, description="The author of the rule.")
+    ticket: str | None = Field(default=None, description="The ticket for the rule.")
 
 
 class Search(Model):
@@ -99,6 +101,7 @@ class Search(Model):
     index_end: str | None = Field(
         default=None, description="The end time for the index period."
     )
+    schedule: str = Field(description="The schedule for the search.")
     suppression: Suppression | None = Field(
         default=None, description="The suppression for the search."
     )
@@ -130,6 +133,7 @@ class Metadata(Model):
     id: str = Field(description="The internal identifier for the rule.")
     name: str = Field(description="The name of the rule.")
     description: str = Field(description="The description of the rule.")
+    status: str = Field(description="The status of the rule.")
     severity: Severity = Field(description="The severity of the rule.")
     confidence: Confidence = Field(description="The confidence of the rule.")
     priority: Priority = Field(description="The priority of generated alerts.")
@@ -141,6 +145,7 @@ class Metadata(Model):
 
 class Definition(Model):
     """The Definition container combining all data for a rule."""
+
     source: Source = Field(description="The source of the rule.")
 
     metadata: Metadata
